@@ -130,6 +130,30 @@ mongod --dbpath .\mongodb-data --port 27017
 - Frontend: http://localhost:5173
 - Backend API Docs: http://localhost:8000/docs
 
+## GitHub and .env Safety
+
+- Never commit real secrets (API keys, tokens, credentials) to GitHub.
+- Keep secrets only in local `.env` files (already ignored via `.gitignore`).
+- Commit only template files such as `backend/.env.example` and `frontend/.env.example`.
+- After cloning the repo, create local env files:
+
+Linux/macOS:
+
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item backend/.env.example backend/.env
+Copy-Item frontend/.env.example frontend/.env
+```
+
+- If a secret is accidentally pushed, rotate/revoke it immediately and remove it from git history.
+- For production deployment, use secure secret managers or CI/CD encrypted secrets instead of committed files.
+
 ## Detailed Working Guide
 
 - Project internals and architecture diagram: [PROJECT_WORKING.md](PROJECT_WORKING.md)

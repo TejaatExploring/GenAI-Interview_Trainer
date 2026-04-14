@@ -217,3 +217,14 @@ For local development, run these components:
 3. Add caching layer for analytics endpoints.
 4. Add integration tests for full interview workflow.
 5. Add model usage telemetry and cost dashboards.
+
+## 9. GitHub, Secrets, and Environment Files
+
+- Keep real secrets only in local environment files.
+- Track only sample templates (`.env.example`) in git.
+- Ensure `.env` files are ignored by `.gitignore`.
+- On clone, copy templates and populate values locally:
+  - `backend/.env.example` -> `backend/.env`
+  - `frontend/.env.example` -> `frontend/.env`
+- If any secret is exposed in a commit, rotate the credential immediately.
+- Prefer CI/CD encrypted secrets or managed secret stores for production.
