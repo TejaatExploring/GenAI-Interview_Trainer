@@ -1,0 +1,23 @@
+{
+  "Beginner": [
+    "Variables and Data Types",
+    "Control Flow",
+    "Functions",
+    "Arrays and Strings",
+    "Basic Debugging"
+  ],
+  "Intermediate": [
+    "Hash Tables",
+    "Trees",
+    "Recursion",
+    "Object-Oriented Design",
+    "REST API Design"
+  ],
+  "Advanced": [
+    "Distributed Systems",
+    "Scalability Patterns",
+    "Database Indexing",
+    "Concurrency and Parallelism",
+    "System Reliability"
+  ]
+}

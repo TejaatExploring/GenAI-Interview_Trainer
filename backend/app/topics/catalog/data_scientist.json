@@ -1,0 +1,23 @@
+{
+  "Beginner": [
+    "Data Cleaning",
+    "Descriptive Statistics",
+    "Data Visualization Basics",
+    "Pandas Operations",
+    "Feature Basics"
+  ],
+  "Intermediate": [
+    "Feature Engineering",
+    "Model Validation",
+    "Bias Variance Tradeoff",
+    "Classification Metrics",
+    "Experiment Design"
+  ],
+  "Advanced": [
+    "Causal Inference",
+    "Model Drift",
+    "MLOps Pipelines",
+    "Advanced Time Series",
+    "Model Explainability"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "Beginner": [
+    "CIA Triad",
+    "Common Vulnerabilities",
+    "Authentication Basics",
+    "Network Security Basics",
+    "Security Hygiene"
+  ],
+  "Intermediate": [
+    "Threat Modeling",
+    "Incident Response",
+    "SIEM Fundamentals",
+    "Secure Coding",
+    "Identity and Access Management"
+  ],
+  "Advanced": [
+    "Zero Trust Architecture",
+    "Advanced Persistent Threats",
+    "Cloud Security Governance",
+    "Red Team vs Blue Team Strategy",
+    "Security Program Design"
+  ]
+}
