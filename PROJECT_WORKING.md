@@ -40,9 +40,9 @@ flowchart LR
     ANALYTICS --> FE
 ```
 
-  ## 2.1 Sequence Diagram (Request-by-Request Flow)
+## 2.1 Sequence Diagram (Request-by-Request Flow)
 
-  ```mermaid
+```mermaid
   sequenceDiagram
     autonumber
     participant User
@@ -88,7 +88,7 @@ flowchart LR
     API->>DB: Aggregate filtered analytics
     DB-->>API: Aggregated stats
     API-->>FE: Overview + trends + breakdown
-  ```
+```
 
 ## 3. Backend Working (Detailed)
 
@@ -140,6 +140,59 @@ Analytics endpoints read stored evaluations and aggregate by user and optional q
   - average accuracy, clarity, structure, completeness
 
 These APIs are consumed by the dashboard page and update when filter selection changes.
+
+## 3.4 Semi-RAG Topic Control (Detailed)
+
+The project uses a semi-RAG approach for question generation. It is called semi-RAG because it performs retrieval, but from curated internal catalogs instead of a full external vector database.
+
+How it works:
+
+1. The system receives role, experience level, and question type from the active session.
+2. Topic Selector reads the role-specific catalog from backend/app/topics/catalog.
+3. It excludes recently used topics in the same session to reduce repetition.
+4. It chooses a topic that matches role + level constraints.
+5. Prompt Builder injects that topic into a strict generation prompt.
+6. LLM produces a structured question payload tied to that retrieved topic.
+
+Why this is useful:
+
+- Keeps the interview grounded in domain-relevant content.
+- Prevents random, generic, or off-role questions.
+- Improves consistency across sessions.
+- Reduces hallucination risk by constraining generation context before model invocation.
+
+Current scope of retrieval:
+
+- Retrieval source: static JSON catalogs.
+- Retrieval granularity: role-level and experience-level topics.
+- Retrieval strategy: deterministic/controlled selection with anti-repetition rules.
+- Generation strategy: retrieved topic + strict prompt + response validation.
+
+This gives many of the practical benefits of RAG for this use case while keeping implementation lightweight and easy to maintain.
+
+## 3.5 Semi-RAG vs Plain API Call to LLM
+
+A plain API call means sending a generic prompt directly to the model with little or no retrieved context. Semi-RAG adds a retrieval layer before the model call.
+
+Comparison:
+
+- Plain API call:
+  - Input: user request + generic instruction.
+  - No controlled retrieval.
+  - Output quality depends heavily on model prior knowledge and prompt wording.
+  - Higher chance of generic or irrelevant interview questions.
+
+- Semi-RAG in this project:
+  - Input: user request + retrieved role/topic context + strict schema prompt.
+  - Controlled retrieval from curated catalogs.
+  - Output is domain-scoped and validated against expected schema.
+  - Lower chance of irrelevant questions and malformed outputs.
+
+In short, this architecture is not just “call LLM and return text.” It is an orchestration pipeline:
+
+retrieval -> prompt construction -> LLM generation -> validation -> persistence -> analytics.
+
+That orchestration is the key difference that makes outputs more reliable for interview training.
 
 ## 4. Frontend Working (Detailed)
 
