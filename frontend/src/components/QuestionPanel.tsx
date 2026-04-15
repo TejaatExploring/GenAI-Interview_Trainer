@@ -35,35 +35,43 @@ export function QuestionPanel({ question, isGenerating = false, autoSpeak = true
 
   if (isGenerating) {
     return (
-      <div className="card glass-card ai-event-card loading-card">
-        <h3>AI Interviewer</h3>
-        <div className="typing-indicator" aria-label="AI is typing">
-          <span />
-          <span />
-          <span />
+      <div className="chat-message ai-message loading-card">
+        <div className="chat-avatar ai-avatar">AI</div>
+        <div className="chat-bubble">
+          <p className="eyebrow">AI Interviewer</p>
+          <h4>Thinking of your next question...</h4>
+          <div className="typing-indicator" aria-label="AI is typing">
+            <span />
+            <span />
+            <span />
+          </div>
         </div>
-        <p className="card-subtitle">AI is generating question...</p>
       </div>
     );
   }
 
   if (!question) {
-    return <div className="card muted-card">Start AI Interview to generate your first question.</div>;
+    return <div className="chat-empty-state">Start AI Interview to begin the conversation.</div>;
   }
 
   return (
-    <div className="card glass-card ai-event-card">
-      <p className="eyebrow">AI Interviewer</p>
-      <h3>Question #{question.sequence_number}</h3>
-      <p className="card-subtitle">Topic: {question.payload.topic}</p>
-      <p className="question-copy">{question.payload.question}</p>
-      {speechSupported ? (
-        <div className="action-row">
-          <button className="secondary-action" onClick={speakQuestion} type="button">
-            Replay Audio Question
-          </button>
+    <div className="chat-message ai-message">
+      <div className="chat-avatar ai-avatar">AI</div>
+      <div className="chat-bubble">
+        <div className="chat-head">
+          <p className="eyebrow">AI Interviewer</p>
+          <span className="chat-chip">Q{question.sequence_number}</span>
         </div>
-      ) : null}
+        <p className="card-subtitle">Topic: {question.payload.topic}</p>
+        <p className="question-copy">{question.payload.question}</p>
+        {speechSupported ? (
+          <div className="chat-row">
+            <button className="secondary-action" onClick={speakQuestion} type="button">
+              Replay Audio Question
+            </button>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -23,6 +23,7 @@ export function InterviewPage({ onSessionComplete }: Props) {
   const [isGeneratingNext, setIsGeneratingNext] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastAnswerPreview, setLastAnswerPreview] = useState<string>("");
 
   function getErrorMessage(err: unknown) {
     if (typeof err === "object" && err !== null && "message" in err) {
@@ -43,6 +44,7 @@ export function InterviewPage({ onSessionComplete }: Props) {
       setEvaluation(null);
       const nextQuestion = await getNextQuestion(session.session_id, []);
       setQuestion(nextQuestion);
+      setLastAnswerPreview("");
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -54,6 +56,7 @@ export function InterviewPage({ onSessionComplete }: Props) {
     if (!sessionId || !question) return;
     setIsEvaluating(true);
     setError(null);
+    setLastAnswerPreview(answerText.trim());
     try {
       const result = await submitAnswer(sessionId, question.question_id, answerText);
       if (sessionMode === "Mock") {
@@ -64,6 +67,7 @@ export function InterviewPage({ onSessionComplete }: Props) {
           setIsGeneratingNext(true);
           const nextQuestion = await getNextQuestion(sessionId, []);
           setQuestion(nextQuestion);
+          setLastAnswerPreview("");
         } else {
           setQuestion(null);
         }
@@ -86,6 +90,7 @@ export function InterviewPage({ onSessionComplete }: Props) {
       const nextQuestion = await getNextQuestion(sessionId, []);
       setQuestion(nextQuestion);
       setEvaluation(null);
+      setLastAnswerPreview("");
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -157,18 +162,30 @@ export function InterviewPage({ onSessionComplete }: Props) {
       <section className="interview-main stack">
         <InterviewSetupForm onStart={startInterview} isStarted={Boolean(sessionId)} />
         {error ? <div className="card status-card error-card">Error: {error}</div> : null}
-        {sessionId ? <div className="card awaiting-card">{progressText}</div> : null}
-        <QuestionPanel question={question} isGenerating={isStarting || isGeneratingNext} autoSpeak />
-        <AnswerInput
-          onSubmit={evaluate}
-          disabled={answerDisabled}
-          isSubmitting={isEvaluating}
-          resetKey={question?.question_id ?? null}
-        />
+        {sessionId ? <div className="card awaiting-card chat-progress-card">{progressText}</div> : null}
+        <div className="card chat-panel">
+          <QuestionPanel question={question} isGenerating={isStarting || isGeneratingNext} autoSpeak />
+          {lastAnswerPreview ? (
+            <div className="chat-message user-message">
+              <div className="chat-avatar user-avatar">U</div>
+              <div className="chat-bubble">
+                <p>{lastAnswerPreview}</p>
+              </div>
+            </div>
+          ) : null}
+          <AnswerInput
+            onSubmit={evaluate}
+            disabled={answerDisabled}
+            isSubmitting={isEvaluating}
+            resetKey={question?.question_id ?? null}
+          />
+        </div>
         {sessionMode === "Practice" && evaluation ? (
-          <button className="secondary-action" onClick={loadNextPracticeQuestion} disabled={isGeneratingNext}>
-            {isGeneratingNext ? "Generating next question..." : "Next Question"}
-          </button>
+          <div className="next-question-wrap">
+            <button className="primary-action next-question-action" onClick={loadNextPracticeQuestion} disabled={isGeneratingNext}>
+              {isGeneratingNext ? "Generating next question..." : "Next Question"}
+            </button>
+          </div>
         ) : null}
       </section>
 

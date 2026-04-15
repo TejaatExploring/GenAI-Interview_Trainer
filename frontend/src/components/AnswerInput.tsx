@@ -22,6 +22,24 @@ export function AnswerInput({ onSubmit, disabled = false, isSubmitting = false, 
     setVoiceError(null);
   }, [resetKey]);
 
+  async function handleSubmit() {
+    const normalized = answer.trim();
+    if (!normalized || disabled || isSubmitting || isTranscribing) {
+      return;
+    }
+
+    // Clear immediately to mimic chat composer behavior.
+    setAnswer("");
+    await onSubmit(normalized);
+  }
+
+  async function onComposerKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      await handleSubmit();
+    }
+  }
+
   async function recordVoiceAnswer() {
     if (isRecording && recorderRef.current) {
       recorderRef.current.stop();
@@ -74,32 +92,58 @@ export function AnswerInput({ onSubmit, disabled = false, isSubmitting = false, 
   }
 
   return (
-    <div className="card glass-card">
-      <h3>Your Answer</h3>
-      <p className="card-subtitle">Respond in text or record voice, then submit for AI coaching feedback.</p>
-      <textarea
-        rows={8}
-        value={answer}
-        onChange={(e) => setAnswer(e.target.value)}
-        placeholder={disabled ? "Generate a question to unlock your answer box..." : "Write your interview answer here..."}
-        disabled={disabled || isSubmitting || isTranscribing}
-      />
-      <div className="action-row">
-        <button
-          className="primary-action"
-          onClick={() => onSubmit(answer)}
-          disabled={disabled || !answer.trim() || isSubmitting || isTranscribing}
-        >
-          {isSubmitting ? "Analyzing answer..." : "Submit Answer"}
-        </button>
-        <button
-          className={isRecording ? "secondary-action mic-action recording" : "secondary-action mic-action"}
-          onClick={recordVoiceAnswer}
+    <div className="chat-composer chatgpt-composer">
+      <div className="chatgpt-composer-shell">
+        <textarea
+          className="chatgpt-input"
+          rows={1}
+          value={answer}
+          onChange={(e) => setAnswer(e.target.value)}
+          onKeyDown={onComposerKeyDown}
+          placeholder={disabled ? "Waiting for next AI question..." : "Ask anything"}
           disabled={disabled || isSubmitting || isTranscribing}
-        >
-          {isRecording ? "Stop Recording" : isTranscribing ? "Transcribing..." : "Record Voice"}
-        </button>
+        />
+
+        <div className="composer-actions">
+          <button
+            className={isRecording ? "icon-btn composer-mic recording" : "icon-btn composer-mic"}
+            onClick={recordVoiceAnswer}
+            disabled={disabled || isSubmitting || isTranscribing}
+            type="button"
+            aria-label="Record voice"
+          >
+            {isRecording ? (
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" />
+              </svg>
+            ) : isTranscribing ? (
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" fill="currentColor" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <path
+                  d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Zm-5 9a1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21H8a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2h-3v-2.08A7 7 0 0 0 19 12a1 1 0 1 0-2 0 5 5 0 0 1-10 0Z"
+                  fill="currentColor"
+                />
+              </svg>
+            )}
+          </button>
+
+          <button
+            className="icon-btn composer-send"
+            onClick={handleSubmit}
+            disabled={disabled || !answer.trim() || isSubmitting || isTranscribing}
+            type="button"
+            aria-label="Send answer"
+          >
+            {isSubmitting ? "..." : "->"}
+          </button>
+        </div>
       </div>
+
+      <div className="composer-hint">Press Enter to send, Shift+Enter for new line.</div>
+
       {voiceError ? <p className="error-text">{voiceError}</p> : null}
     </div>
   );
