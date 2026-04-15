@@ -5,6 +5,29 @@ interface Props {
   isEvaluating?: boolean;
 }
 
+function formatImprovedAnswer(raw: string): { isCode: boolean; text: string } {
+  let text = raw.trim();
+
+  const fenced = text.match(/^```(?:json|javascript|js|ts|python|text)?\s*([\s\S]*?)\s*```$/i);
+  if (fenced && fenced[1]) {
+    text = fenced[1].trim();
+  }
+
+  text = text.replace(/\\n/g, "\n").replace(/\\t/g, "\t").trim();
+
+  try {
+    const parsed = JSON.parse(text);
+    if (typeof parsed === "object" && parsed !== null) {
+      return { isCode: true, text: JSON.stringify(parsed, null, 2) };
+    }
+  } catch {
+    // Keep original text if it's not valid JSON.
+  }
+
+  const looksLikeStructured = text.startsWith("{") || text.startsWith("[") || text.includes("\":") || text.includes("\n");
+  return { isCode: looksLikeStructured, text };
+}
+
 export function FeedbackCard({ evaluation, isEvaluating = false }: Props) {
   if (isEvaluating) {
     return (
@@ -27,6 +50,7 @@ export function FeedbackCard({ evaluation, isEvaluating = false }: Props) {
   }
 
   const scores = evaluation.payload.scores;
+  const improvedAnswer = formatImprovedAnswer(evaluation.payload.improved_answer);
 
   return (
     <div className="card feedback-card">
@@ -75,7 +99,13 @@ export function FeedbackCard({ evaluation, isEvaluating = false }: Props) {
 
       <section className="feedback-block improved-answer">
         <p className="feedback-label">Improved Answer</p>
-        <p>{evaluation.payload.improved_answer}</p>
+        {improvedAnswer.isCode ? (
+          <pre className="improved-answer-code">
+            <code>{improvedAnswer.text}</code>
+          </pre>
+        ) : (
+          <p>{improvedAnswer.text}</p>
+        )}
       </section>
     </div>
   );

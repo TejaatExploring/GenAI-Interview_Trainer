@@ -39,6 +39,15 @@ async def next_question(session_id: str, payload: NextQuestionRequest):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    existing_questions = await SessionRepository.get_session_questions(session_id)
+    existing_evaluations = await SessionRepository.get_session_evaluations(session_id)
+
+    if len(existing_questions) > len(existing_evaluations):
+        raise HTTPException(status_code=400, detail="Answer current question before requesting the next one")
+
+    if session.get("mode") == "Mock" and len(existing_questions) >= int(session.get("total_questions", 5)):
+        raise HTTPException(status_code=400, detail="Mock interview has reached its question limit")
+
     question = await controller.next_question(session, payload.constraints)
     return QuestionResponse(
         question_id=str(question["_id"]),
@@ -59,6 +68,10 @@ async def submit_answer(session_id: str, payload: AnswerSubmitRequest):
     question = next((item for item in questions if str(item["_id"]) == payload.question_id), None)
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
+
+    evaluations = await SessionRepository.get_session_evaluations(session_id)
+    if any(item.get("question_id") == payload.question_id for item in evaluations):
+        raise HTTPException(status_code=400, detail="Answer already submitted for this question")
 
     evaluation = await controller.evaluate_answer(session, question, payload.answer_text)
     return EvaluationResponse(

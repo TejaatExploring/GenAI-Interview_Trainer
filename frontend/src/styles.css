@@ -428,6 +428,22 @@ textarea:focus {
   margin: 0;
   line-height: 1.55;
   color: #e1e7f7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.improved-answer-code {
+  margin: 0;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #263149;
+  background: #0a1220;
+  color: #dce5ff;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
 }
 
 .error-text {

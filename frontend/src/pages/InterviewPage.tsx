@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { AnswerInput } from "../components/AnswerInput";
 import { FeedbackCard } from "../components/FeedbackCard";
 import { InterviewSetupForm } from "../components/InterviewSetupForm";
 import { QuestionPanel } from "../components/QuestionPanel";
 import { completeSession, createSession, getNextQuestion, submitAnswer } from "../services/interviewApi";
-import type { EvaluationResponse, QuestionResponse, SessionRequest } from "../types";
+import type { EvaluationResponse, InterviewMode, QuestionResponse, SessionRequest } from "../types";
 
 interface Props {
   onSessionComplete: () => void;
@@ -13,10 +13,14 @@ interface Props {
 
 export function InterviewPage({ onSessionComplete }: Props) {
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionMode, setSessionMode] = useState<InterviewMode>("Practice");
+  const [targetQuestions, setTargetQuestions] = useState(1);
   const [question, setQuestion] = useState<QuestionResponse | null>(null);
   const [evaluation, setEvaluation] = useState<EvaluationResponse | null>(null);
+  const [mockEvaluations, setMockEvaluations] = useState<EvaluationResponse[]>([]);
   const [isStarting, setIsStarting] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const [isGeneratingNext, setIsGeneratingNext] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,9 +37,12 @@ export function InterviewPage({ onSessionComplete }: Props) {
     try {
       const session = await createSession(payload);
       setSessionId(session.session_id);
+      setSessionMode(session.mode);
+      setTargetQuestions(session.mode === "Mock" ? 5 : 1);
+      setMockEvaluations([]);
+      setEvaluation(null);
       const nextQuestion = await getNextQuestion(session.session_id, []);
       setQuestion(nextQuestion);
-      setEvaluation(null);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -49,11 +56,40 @@ export function InterviewPage({ onSessionComplete }: Props) {
     setError(null);
     try {
       const result = await submitAnswer(sessionId, question.question_id, answerText);
-      setEvaluation(result);
+      if (sessionMode === "Mock") {
+        const updatedEvaluations = [...mockEvaluations, result];
+        setMockEvaluations(updatedEvaluations);
+
+        if (updatedEvaluations.length < targetQuestions) {
+          setIsGeneratingNext(true);
+          const nextQuestion = await getNextQuestion(sessionId, []);
+          setQuestion(nextQuestion);
+        } else {
+          setQuestion(null);
+        }
+      } else {
+        setEvaluation(result);
+      }
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
       setIsEvaluating(false);
+      setIsGeneratingNext(false);
+    }
+  }
+
+  async function loadNextPracticeQuestion() {
+    if (!sessionId || sessionMode !== "Practice" || !evaluation) return;
+    setIsGeneratingNext(true);
+    setError(null);
+    try {
+      const nextQuestion = await getNextQuestion(sessionId, []);
+      setQuestion(nextQuestion);
+      setEvaluation(null);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsGeneratingNext(false);
     }
   }
 
@@ -71,21 +107,79 @@ export function InterviewPage({ onSessionComplete }: Props) {
     }
   }
 
+  const mockCompleted = sessionMode === "Mock" && mockEvaluations.length === targetQuestions;
+
+  const mergedMockEvaluation = useMemo<EvaluationResponse | null>(() => {
+    if (!mockCompleted || !sessionId || mockEvaluations.length === 0) return null;
+
+    const average = (values: number[]) => values.reduce((sum, current) => sum + current, 0) / values.length;
+    const unique = (items: string[]) => Array.from(new Set(items));
+
+    const scores = {
+      accuracy: Number(average(mockEvaluations.map((item) => item.payload.scores.accuracy)).toFixed(1)),
+      clarity: Number(average(mockEvaluations.map((item) => item.payload.scores.clarity)).toFixed(1)),
+      structure: Number(average(mockEvaluations.map((item) => item.payload.scores.structure)).toFixed(1)),
+      completeness: Number(average(mockEvaluations.map((item) => item.payload.scores.completeness)).toFixed(1)),
+      overall: Number(average(mockEvaluations.map((item) => item.payload.scores.overall)).toFixed(1)),
+    };
+
+    return {
+      evaluation_id: `mock-summary-${sessionId}`,
+      session_id: sessionId,
+      question_id: "mock-combined",
+      created_at: new Date().toISOString(),
+      payload: {
+        scores,
+        strengths: unique(mockEvaluations.flatMap((item) => item.payload.strengths)).slice(0, 5),
+        improvements: unique(mockEvaluations.flatMap((item) => item.payload.improvements)).slice(0, 5),
+        feedback: `Mock interview complete. Final summary is based on all ${targetQuestions} answers.`,
+        improved_answer:
+          "Review each response, tighten structure with STAR, and focus your next mock on the lowest scoring dimension from this summary.",
+      },
+    };
+  }, [mockCompleted, mockEvaluations, sessionId, targetQuestions]);
+
+  const shownEvaluation = sessionMode === "Mock" ? mergedMockEvaluation : evaluation;
+  const practiceLocked = sessionMode === "Practice" && Boolean(evaluation);
+  const answerDisabled = !question || isStarting || isGeneratingNext || isEvaluating || practiceLocked || mockCompleted;
+  const canComplete =
+    Boolean(sessionId) && ((sessionMode === "Practice" && Boolean(evaluation)) || (sessionMode === "Mock" && mockCompleted));
+
+  const progressText =
+    sessionMode === "Mock"
+      ? `Mock Progress: ${mockEvaluations.length}/${targetQuestions}`
+      : evaluation
+        ? "Practice feedback ready. Use Next Question to continue."
+        : "Practice mode: answer this question to get feedback.";
+
   return (
-    <div className="stack interview-page">
-      <InterviewSetupForm onStart={startInterview} isStarted={Boolean(sessionId)} />
-      {isStarting ? <div className="card status-card">Starting interview and generating question...</div> : null}
-      {error ? <div className="card status-card error-card">Error: {error}</div> : null}
-      <div className={sessionId ? "session-area session-active" : "session-area session-inactive"}>
-        <QuestionPanel question={question} />
-        <AnswerInput onSubmit={evaluate} />
-        <FeedbackCard evaluation={evaluation} isEvaluating={isEvaluating} />
+    <div className="interview-layout fade-in-up">
+      <section className="interview-main stack">
+        <InterviewSetupForm onStart={startInterview} isStarted={Boolean(sessionId)} />
+        {error ? <div className="card status-card error-card">Error: {error}</div> : null}
+        {sessionId ? <div className="card awaiting-card">{progressText}</div> : null}
+        <QuestionPanel question={question} isGenerating={isStarting || isGeneratingNext} autoSpeak />
+        <AnswerInput
+          onSubmit={evaluate}
+          disabled={answerDisabled}
+          isSubmitting={isEvaluating}
+          resetKey={question?.question_id ?? null}
+        />
+        {sessionMode === "Practice" && evaluation ? (
+          <button className="secondary-action" onClick={loadNextPracticeQuestion} disabled={isGeneratingNext}>
+            {isGeneratingNext ? "Generating next question..." : "Next Question"}
+          </button>
+        ) : null}
+      </section>
+
+      <aside className="interview-aside stack">
+        <FeedbackCard evaluation={shownEvaluation} isEvaluating={isEvaluating} />
         {sessionId ? (
-          <button className="primary-action" onClick={finishSession} disabled={isCompleting}>
+          <button className="primary-action finish-action" onClick={finishSession} disabled={isCompleting || !canComplete}>
             {isCompleting ? "Completing..." : "Complete Session"}
           </button>
         ) : null}
-      </div>
+      </aside>
     </div>
   );
 }

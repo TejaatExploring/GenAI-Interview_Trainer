@@ -1,11 +1,14 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { transcribeAudio } from "../services/interviewApi";
 
 interface Props {
   onSubmit: (answerText: string) => Promise<void>;
+  disabled?: boolean;
+  isSubmitting?: boolean;
+  resetKey?: string | null;
 }
 
-export function AnswerInput({ onSubmit }: Props) {
+export function AnswerInput({ onSubmit, disabled = false, isSubmitting = false, resetKey }: Props) {
   const [answer, setAnswer] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -13,6 +16,11 @@ export function AnswerInput({ onSubmit }: Props) {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+
+  useEffect(() => {
+    setAnswer("");
+    setVoiceError(null);
+  }, [resetKey]);
 
   async function recordVoiceAnswer() {
     if (isRecording && recorderRef.current) {
@@ -66,20 +74,30 @@ export function AnswerInput({ onSubmit }: Props) {
   }
 
   return (
-    <div className="card answer-card">
-      <p className="eyebrow label-inline">Your Response</p>
+    <div className="card glass-card">
+      <h3>Your Answer</h3>
+      <p className="card-subtitle">Respond in text or record voice, then submit for AI coaching feedback.</p>
       <textarea
         rows={8}
         value={answer}
         onChange={(e) => setAnswer(e.target.value)}
-        placeholder="Type your answer here, or use voice recording..."
+        placeholder={disabled ? "Generate a question to unlock your answer box..." : "Write your interview answer here..."}
+        disabled={disabled || isSubmitting || isTranscribing}
       />
       <div className="action-row">
-        <button className="secondary-action" onClick={recordVoiceAnswer} disabled={isTranscribing}>
-          {isRecording ? "Stop Recording" : isTranscribing ? "Transcribing..." : "Record Voice"}
+        <button
+          className="primary-action"
+          onClick={() => onSubmit(answer)}
+          disabled={disabled || !answer.trim() || isSubmitting || isTranscribing}
+        >
+          {isSubmitting ? "Analyzing answer..." : "Submit Answer"}
         </button>
-        <button className="primary-action" onClick={() => onSubmit(answer)} disabled={!answer.trim()}>
-          Submit Answer
+        <button
+          className={isRecording ? "secondary-action mic-action recording" : "secondary-action mic-action"}
+          onClick={recordVoiceAnswer}
+          disabled={disabled || isSubmitting || isTranscribing}
+        >
+          {isRecording ? "Stop Recording" : isTranscribing ? "Transcribing..." : "Record Voice"}
         </button>
       </div>
       {voiceError ? <p className="error-text">{voiceError}</p> : null}

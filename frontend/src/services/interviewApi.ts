@@ -1,8 +1,8 @@
 import { apiClient } from "./apiClient";
-import type { EvaluationResponse, QuestionResponse, SessionRequest } from "../types";
+import type { EvaluationResponse, QuestionResponse, SessionRequest, SessionResponse } from "../types";
 
 export async function createSession(payload: SessionRequest) {
-  const { data } = await apiClient.post("/interviews/sessions", payload);
+  const { data } = await apiClient.post<SessionResponse>("/interviews/sessions", payload);
   return data;
 }
 

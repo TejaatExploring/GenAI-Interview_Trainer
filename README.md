@@ -76,6 +76,24 @@ npm run dev
 mongod --dbpath ./mongodb-data --port 27017
 ```
 
+```bash
+mkdir -p /home/myth/Desktop/GenAI/Project/.mongodb-data /home/myth/Desktop/GenAI/Project/.mongodb-logs
+mongod --dbpath /home/myth/Desktop/GenAI/Project/.mongodb-data \
+  --bind_ip 127.0.0.1 --port 27017 \
+  --logpath /home/myth/Desktop/GenAI/Project/.mongodb-logs/mongod.log \
+  --fork
+```
+
+```bash
+cd /home/myth/Desktop/GenAI/Project/backend
+/home/myth/Desktop/GenAI/Project/.venv/bin/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+```bash
+cd /home/myth/Desktop/GenAI/Project/frontend
+npm run dev -- --host 0.0.0.0 --port 5173
+```
+
 ## Setup and Run (Windows PowerShell)
 
 1. Backend setup:

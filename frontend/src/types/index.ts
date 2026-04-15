@@ -11,6 +11,17 @@ export interface SessionRequest {
   total_questions: number;
 }
 
+export interface SessionResponse {
+  session_id: string;
+  user_id: string;
+  role: string;
+  experience_level: ExperienceLevel;
+  question_type: QuestionType;
+  mode: InterviewMode;
+  total_questions: number;
+  created_at: string;
+}
+
 export interface QuestionPayload {
   question: string;
   topic: string;
