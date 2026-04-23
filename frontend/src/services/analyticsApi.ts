@@ -20,3 +20,10 @@ export async function fetchBreakdown(userId: string, questionType: string = "All
   });
   return data;
 }
+
+export async function fetchHistory(userId: string, questionType: string = "All Types", limit: number = 25) {
+  const { data } = await apiClient.get(`/analytics/users/${userId}/history`, {
+    params: { question_type: questionType, limit },
+  });
+  return data;
+}

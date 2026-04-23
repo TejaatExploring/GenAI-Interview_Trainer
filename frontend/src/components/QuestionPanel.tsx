@@ -60,7 +60,12 @@ export function QuestionPanel({ question, isGenerating = false, autoSpeak = true
       <div className="chat-bubble">
         <div className="chat-head">
           <p className="eyebrow">AI Interviewer</p>
-          <span className="chat-chip">Q{question.sequence_number}</span>
+          <div className="chip-row">
+            <span className="chat-chip">Q{question.sequence_number}</span>
+            <span className={question.source === "fallback" ? "source-badge fallback" : "source-badge ai"}>
+              {question.source === "fallback" ? "Fallback" : "AI"}
+            </span>
+          </div>
         </div>
         <p className="card-subtitle">Topic: {question.payload.topic}</p>
         <p className="question-copy">{question.payload.question}</p>

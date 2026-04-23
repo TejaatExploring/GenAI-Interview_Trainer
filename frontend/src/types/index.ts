@@ -35,6 +35,7 @@ export interface QuestionResponse {
   session_id: string;
   sequence_number: number;
   payload: QuestionPayload;
+  source: "ai" | "fallback";
   created_at: string;
 }
 
@@ -42,6 +43,7 @@ export interface EvaluationResponse {
   evaluation_id: string;
   session_id: string;
   question_id: string;
+  source: "ai" | "fallback";
   payload: {
     scores: {
       accuracy: number;

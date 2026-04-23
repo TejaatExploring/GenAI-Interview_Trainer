@@ -11,7 +11,7 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 
-import { fetchBreakdown, fetchOverview, fetchTrends } from "../services/analyticsApi";
+import { fetchBreakdown, fetchHistory, fetchOverview, fetchTrends } from "../services/analyticsApi";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 
@@ -40,10 +40,41 @@ interface TrendsData {
   trends: TrendItem[];
 }
 
+interface HistoryItem {
+  evaluation_id: string;
+  session_id: string;
+  question_id: string;
+  date: string;
+  created_at: string;
+  score: number;
+  source: "ai" | "fallback";
+  question: string;
+  topic: string;
+  question_type: string;
+  answer_text: string;
+  feedback: string;
+  improved_answer: string;
+  strengths: string[];
+  improvements: string[];
+  scores: {
+    accuracy: number;
+    clarity: number;
+    structure: number;
+    completeness: number;
+    overall: number;
+  };
+}
+
+interface HistoryData {
+  items: HistoryItem[];
+}
+
 export function DashboardPage() {
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [trends, setTrends] = useState<TrendsData | null>(null);
   const [breakdown, setBreakdown] = useState<BreakdownData | null>(null);
+  const [history, setHistory] = useState<HistoryData | null>(null);
+  const [selectedHistory, setSelectedHistory] = useState<HistoryItem | null>(null);
   const [trendType, setTrendType] = useState("All Types");
 
   useEffect(() => {
@@ -52,10 +83,13 @@ export function DashboardPage() {
       fetchOverview(userId, trendType),
       fetchTrends(userId, trendType),
       fetchBreakdown(userId, trendType),
-    ]).then(([o, t, b]) => {
+      fetchHistory(userId, trendType, 30),
+    ]).then(([o, t, b, h]) => {
       setOverview(o);
       setTrends(t);
       setBreakdown(b);
+      setHistory(h);
+      setSelectedHistory(h.items?.[0] ?? null);
     });
   }, [trendType]);
 
@@ -271,18 +305,74 @@ export function DashboardPage() {
       <section className="card history-card">
         <p className="eyebrow label-inline">Recent Session History</p>
         <div className="history-list">
-          {(trends?.trends ?? []).slice(-3).reverse().map((item) => (
-            <div key={item.date} className="history-item">
+          {(history?.items ?? []).slice(0, 8).map((item) => (
+            <button
+              key={item.evaluation_id}
+              className={selectedHistory?.evaluation_id === item.evaluation_id ? "history-item active" : "history-item"}
+              onClick={() => setSelectedHistory(item)}
+            >
               <div>
-                <strong>Interview Session</strong>
-                <p>{item.date}</p>
+                <strong>{item.topic}</strong>
+                <p>{item.date} • {item.question_type}</p>
               </div>
               <div className="history-score">{item.score.toFixed(1)} /10</div>
-            </div>
+            </button>
           ))}
-          {!trends?.trends?.length ? <p className="card-subtitle">No sessions yet. Complete an interview to populate history.</p> : null}
+          {!history?.items?.length ? <p className="card-subtitle">No sessions yet. Complete an interview to populate history.</p> : null}
         </div>
       </section>
+
+      {selectedHistory ? (
+        <section className="card history-detail-card">
+          <div className="history-detail-head">
+            <div>
+              <p className="eyebrow">Selected Attempt</p>
+              <h3>{selectedHistory.topic} • {selectedHistory.question_type}</h3>
+            </div>
+            <div className="history-detail-score">{selectedHistory.scores.overall.toFixed(1)} / 10</div>
+          </div>
+
+          <div className="history-detail-block">
+            <p className="feedback-label">Question Asked</p>
+            <p>{selectedHistory.question}</p>
+          </div>
+
+          <div className="history-detail-block">
+            <p className="feedback-label">Your Answer</p>
+            <p>{selectedHistory.answer_text || "No answer text stored."}</p>
+          </div>
+
+          <div className="history-detail-block">
+            <p className="feedback-label">AI Feedback</p>
+            <p>{selectedHistory.feedback}</p>
+          </div>
+
+          <div className="history-detail-grid">
+            <div className="history-detail-block">
+              <p className="feedback-label">Strengths</p>
+              <ul>
+                {selectedHistory.strengths.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="history-detail-block">
+              <p className="feedback-label">Improvements</p>
+              <ul>
+                {selectedHistory.improvements.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="history-detail-block">
+            <p className="feedback-label">Improved Answer Suggestion</p>
+            <p>{selectedHistory.improved_answer}</p>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

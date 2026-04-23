@@ -54,6 +54,7 @@ async def next_question(session_id: str, payload: NextQuestionRequest):
         session_id=question["session_id"],
         sequence_number=question["sequence_number"],
         payload=question["payload"],
+        source=question.get("source", "ai"),
         created_at=question["created_at"],
     )
 
@@ -79,6 +80,7 @@ async def submit_answer(session_id: str, payload: AnswerSubmitRequest):
         session_id=evaluation["session_id"],
         question_id=evaluation["question_id"],
         payload=evaluation["payload"],
+        source=evaluation.get("source", "ai"),
         created_at=evaluation["created_at"],
     )
 

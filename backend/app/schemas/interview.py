@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -59,6 +60,7 @@ class QuestionResponse(BaseModel):
     session_id: str
     sequence_number: int
     payload: QuestionPayload
+    source: Literal["ai", "fallback"] = "ai"
     created_at: datetime
 
 

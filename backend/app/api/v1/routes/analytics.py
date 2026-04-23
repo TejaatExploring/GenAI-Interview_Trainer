@@ -36,3 +36,9 @@ async def breakdown(user_id: str, question_type: str = Query(default="All Types"
     evaluations = await AnalyticsRepository.get_user_evaluations(user_id, question_type)
     averages = AnalyticsRepository.compute_averages(evaluations)
     return {"user_id": user_id, "question_type": question_type, "averages": averages}
+
+
+@router.get("/users/{user_id}/history")
+async def history(user_id: str, question_type: str = Query(default="All Types"), limit: int = Query(default=25, ge=1, le=100)):
+    items = await AnalyticsRepository.get_user_history(user_id, question_type, limit)
+    return {"user_id": user_id, "question_type": question_type, "items": items}

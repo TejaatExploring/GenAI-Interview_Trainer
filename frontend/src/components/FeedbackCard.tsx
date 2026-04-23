@@ -1,16 +1,29 @@
 import type { EvaluationResponse } from "../types";
+import type { ReactNode } from "react";
 
 interface Props {
   evaluation: EvaluationResponse | null;
   isEvaluating?: boolean;
 }
 
-function formatImprovedAnswer(raw: string): { isCode: boolean; text: string } {
+function parseInlineBold(text: string): ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+  return parts.map((part, idx) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={idx}>{part.slice(2, -2)}</strong>;
+    }
+    return <span key={idx}>{part}</span>;
+  });
+}
+
+function formatImprovedAnswer(raw: string): { isCode: boolean; text: string; lines: string[] } {
   let text = raw.trim();
+  let fencedCode = false;
 
   const fenced = text.match(/^```(?:json|javascript|js|ts|python|text)?\s*([\s\S]*?)\s*```$/i);
   if (fenced && fenced[1]) {
     text = fenced[1].trim();
+    fencedCode = true;
   }
 
   text = text.replace(/\\n/g, "\n").replace(/\\t/g, "\t").trim();
@@ -18,14 +31,18 @@ function formatImprovedAnswer(raw: string): { isCode: boolean; text: string } {
   try {
     const parsed = JSON.parse(text);
     if (typeof parsed === "object" && parsed !== null) {
-      return { isCode: true, text: JSON.stringify(parsed, null, 2) };
+      return { isCode: true, text: JSON.stringify(parsed, null, 2), lines: [] };
     }
   } catch {
     // Keep original text if it's not valid JSON.
   }
 
-  const looksLikeStructured = text.startsWith("{") || text.startsWith("[") || text.includes("\":") || text.includes("\n");
-  return { isCode: looksLikeStructured, text };
+  if (fencedCode) {
+    return { isCode: true, text, lines: [] };
+  }
+
+  const lines = text.split("\n").map((line) => line.trimEnd());
+  return { isCode: false, text, lines };
 }
 
 export function FeedbackCard({ evaluation, isEvaluating = false }: Props) {
@@ -52,6 +69,22 @@ export function FeedbackCard({ evaluation, isEvaluating = false }: Props) {
   const scores = evaluation.payload.scores;
   const improvedAnswer = formatImprovedAnswer(evaluation.payload.improved_answer);
 
+  const groupedLines: Array<{ type: "bullet" | "text"; value: string }> = [];
+  if (!improvedAnswer.isCode) {
+    improvedAnswer.lines.forEach((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        groupedLines.push({ type: "text", value: "" });
+        return;
+      }
+      if (/^[-*]\s+/.test(trimmed)) {
+        groupedLines.push({ type: "bullet", value: trimmed.replace(/^[-*]\s+/, "") });
+      } else {
+        groupedLines.push({ type: "text", value: trimmed });
+      }
+    });
+  }
+
   return (
     <div className="card feedback-card">
       <div className="feedback-header">
@@ -59,7 +92,12 @@ export function FeedbackCard({ evaluation, isEvaluating = false }: Props) {
           <h3>Live AI Feedback</h3>
           <p className="card-subtitle">Detailed evaluation of your latest answer.</p>
         </div>
-        <div className="feedback-overall">{scores.overall.toFixed(1)} / 10</div>
+        <div className="feedback-head-right">
+          <span className={evaluation.source === "fallback" ? "source-badge fallback" : "source-badge ai"}>
+            {evaluation.source === "fallback" ? "Fallback" : "AI"}
+          </span>
+          <div className="feedback-overall">{scores.overall.toFixed(1)} / 10</div>
+        </div>
       </div>
 
       <section className="feedback-block">
@@ -104,7 +142,22 @@ export function FeedbackCard({ evaluation, isEvaluating = false }: Props) {
             <code>{improvedAnswer.text}</code>
           </pre>
         ) : (
-          <p>{improvedAnswer.text}</p>
+          <div className="improved-answer-rich">
+            {groupedLines.map((item, idx) =>
+              item.type === "bullet" ? (
+                <div key={idx} className="improved-line bullet">
+                  <span className="bullet-dot">•</span>
+                  <span>{parseInlineBold(item.value)}</span>
+                </div>
+              ) : item.value ? (
+                <p key={idx} className="improved-line text">
+                  {parseInlineBold(item.value)}
+                </p>
+              ) : (
+                <div key={idx} className="improved-line spacer" />
+              ),
+            )}
+          </div>
         )}
       </section>
     </div>

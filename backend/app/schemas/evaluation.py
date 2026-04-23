@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -30,4 +31,5 @@ class EvaluationResponse(BaseModel):
     session_id: str
     question_id: str
     payload: EvaluationPayload
+    source: Literal["ai", "fallback"] = "ai"
     created_at: datetime
